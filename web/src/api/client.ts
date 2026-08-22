@@ -27,6 +27,22 @@ export function setTokens(tokens: { accessToken: string; refreshToken: string } 
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
 }
 
+/** Authenticated fetch for binary endpoints such as PDF generation. */
+export async function authorizedFetch(path: string, init: RequestInit): Promise<Response> {
+  const makeRequest = () => {
+    const headers = new Headers(init.headers);
+    const token = getAccessToken();
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    return fetch(path, { ...init, headers });
+  };
+
+  const response = await makeRequest();
+  if (response.status !== 401) return response;
+
+  const refreshed = await refreshAccessToken();
+  return refreshed ? makeRequest() : response;
+}
+
 export const api = createClient<paths>({ baseUrl: "/" });
 
 let refreshInFlight: Promise<boolean> | null = null;

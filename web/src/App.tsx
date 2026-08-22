@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "./api/client.js";
 import { useAuth, LoginForm } from "./features/auth/index.js";
+import { PdfConverter } from "./features/pdf/PdfConverter.js";
 
 interface QrResult {
   id: string;
@@ -162,7 +163,7 @@ export default function App() {
     <div className="page">
       <header className="header">
         <h1>API Dev Platform</h1>
-        <p className="subtitle">Modular monolith demo — auth + qr + url</p>
+        <p className="subtitle">Modular monolith demo — auth + qr + url + pdf</p>
       </header>
 
       {!isAuthenticated ? (
@@ -314,6 +315,8 @@ export default function App() {
               </div>
             )}
           </div>
+
+          <PdfConverter />
         </div>
       )}
     </div>

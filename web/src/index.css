@@ -63,6 +63,12 @@ body {
   font-size: 1.1rem;
 }
 
+.card-description {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
 .tabs {
   display: flex;
   gap: 4px;
@@ -114,7 +120,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   padding: 9px 10px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -122,8 +129,16 @@ select {
   font-family: inherit;
 }
 
+textarea {
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid #4f46e5;
   outline-offset: 1px;
 }
@@ -244,6 +259,43 @@ button[type="submit"]:disabled {
   font-weight: 400;
 }
 
+.pdf-card {
+  grid-column: span 2;
+}
+
+.pdf-options {
+  align-items: end;
+}
+
+.check-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding-bottom: 8px;
+  white-space: nowrap;
+}
+
+.check-label input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.pdf-result {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pdf-preview {
+  width: 100%;
+  min-height: 420px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
 .qr-image {
   width: 220px;
   height: 220px;
@@ -286,6 +338,10 @@ button[type="submit"]:disabled {
 
   .dashboard {
     grid-template-columns: 1fr;
+  }
+
+  .pdf-card {
+    grid-column: auto;
   }
 }
 

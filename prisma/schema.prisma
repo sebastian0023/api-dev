@@ -1,0 +1,81 @@
+// Prisma 7: the `prisma-client` generator emits plain TypeScript into `output`
+// (no more implicit generation into node_modules), and requires an explicit
+// driver adapter at runtime — see src/core/db.ts.
+generator client {
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma"
+  moduleFormat  = "esm"
+  runtime       = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── auth module ─────────────────────────────────────────────────────────
+// Every model owned by a module is prefixed with that module's name.
+// No other module's repository.ts may reference these directly.
+
+model AuthUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  apiKeys       ApiKey[]
+  refreshTokens RefreshToken[]
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String    @default("default")
+  keyHash   String    @unique
+  scopes    String[]
+  rateLimit Int       @default(100)
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  // Refresh-token rotation: each refresh issues a new token in the same
+  // family and revokes this one. Presenting an already-revoked token that
+  // still has a live family member signals theft/replay — see
+  // auth.service.ts refresh() for the reuse-detection check.
+  familyId  String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+// ── qr module ───────────────────────────────────────────────────────────
+
+model QrCode {
+  id              String   @id @default(uuid())
+  userId          String
+  payload         String
+  format          String
+  // 'static'   — payload is whatever the caller wants encoded; GET /:id/scan
+  //              does not apply (scanCount only increments via GET /:id).
+  // 'redirect' — the QR image encodes a link back to GET /:id/scan, which
+  //              increments scanCount and 302s to `payload`.
+  mode            String   @default("static")
+  size            Int?
+  errorCorrection String?
+  scanCount       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+}

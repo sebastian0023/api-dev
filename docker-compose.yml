@@ -1,0 +1,83 @@
+# Whole stack in one command: `docker compose up --build`.
+# Dev-mode throughout (bind-mounted source, tsx/vite watch) — this is a
+# disposable demo app, not a production setup.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: apidev
+      POSTGRES_PASSWORD: apidev
+      POSTGRES_DB: apidev
+    ports:
+      - "5432:5432"
+    volumes:
+      - api-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U apidev -d apidev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://apidev:apidev@postgres:5432/apidev?schema=public
+      REDIS_URL: redis://redis:6379
+      PORT: "3000"
+      PUBLIC_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:5173
+      JWT_ACCESS_SECRET: dev-access-secret-change-me-dev-access-secret-change-me
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-me-dev-refresh-secret-change-me
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TOKEN_TTL_DAYS: "30"
+      DEFAULT_RATE_LIMIT_POINTS: "60"
+      DEFAULT_RATE_LIMIT_WINDOW_SECONDS: "60"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./scripts:/app/scripts
+    # Regenerates the client (the bind-mounted ./src can shadow the one
+    # baked in at build time with a stale copy from the host) and applies
+    # pending migrations against the (possibly fresh) postgres container
+    # before starting the watch server.
+    command: sh -c "npx prisma generate && npx prisma migrate deploy && npm run dev"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_PROXY_TARGET: http://api:3000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web/src:/app/src
+      - ./web/index.html:/app/index.html
+
+volumes:
+  api-dev-postgres:

@@ -12,6 +12,7 @@ const EnvSchema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   DEFAULT_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(60),
   DEFAULT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  URL_SHORT_CODE_LENGTH: z.coerce.number().int().min(4).max(32).default(7),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

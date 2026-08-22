@@ -1,6 +1,14 @@
 # API Dev Platform
 
-A developer-facing API platform built as a **modular monolith**: every feature is a self-contained module under `src/modules/`, auto-discovered and wired together by a core loader. Two modules ship today — `auth` and `qr` — but the point of the architecture is that a third (`payments`, `notifications`, ...) can be added **without touching any file under `src/core/`**.
+A developer-facing API platform built as a **modular monolith**. It provides reusable developer APIs for authentication, QR generation, and URL shortening, while keeping each feature independently organized under `src/modules/`.
+
+Current modules:
+
+- `auth` — JWT sessions, refresh-token rotation, and scoped API keys.
+- `qr` — QR image generation and optional tracked redirects.
+- `url` — authenticated URL management and public, counted short-link redirects.
+
+New modules are auto-discovered, dependency-ordered, initialized, and mounted without a central registration file.
 
 ## Stack
 
@@ -46,6 +54,21 @@ npm run web:dev               # http://localhost:5173
 </details>
 
 ## Architecture
+
+```text
+React + Vite web app
+        │ typed OpenAPI client
+        ▼
+Express API ── request context, auth, errors, rate limits, idempotency
+        │
+        ▼
+Module loader ──► auth ──► qr
+        │               └─► url
+        ▼
+PostgreSQL (Prisma) + Redis
+```
+
+The core owns shared HTTP, security, persistence, cache, OpenAPI, and module-loading infrastructure. Feature modules own their routes, schemas, controllers, application logic, and database models. This keeps the project deployable as one application while preserving strong boundaries between capabilities.
 
 ### The module contract
 
@@ -94,6 +117,16 @@ There's no hand-maintained file listing every route for the docs. `src/shared/ht
 ### Response envelope, errors, idempotency, rate limiting
 
 Every response is `{ data, error, meta: { requestId } }` (`res.ok()`, attached by `core/middleware/requestContext.ts`). `core/middleware/errorHandler.ts` is the single place that turns a thrown `ApiError`, `ZodError`, or known Prisma error into that shape. `Idempotency-Key` support (`core/middleware/idempotency.ts`) and per-key rate limiting (`core/middleware/rateLimit.ts`, reading `ApiKey.rateLimit` from Redis-backed `rate-limiter-flexible`) are opt-in per route via `idempotent: true` — rate limiting runs on every route registered through `createModuleRouter()`, keyed by API key when present, falling back to user id or IP.
+
+## Design patterns
+
+- **Modular monolith / plugin architecture:** each module exports a manifest; the loader discovers and mounts it after resolving declared dependencies.
+- **Dependency inversion and composition root:** modules receive infrastructure through `onInit`, while core authentication depends on the `CredentialVerifier` interface rather than importing the auth module.
+- **Repository pattern:** application logic depends on repository contracts. The URL module’s Prisma repository is the only place that accesses `UrlShortUrl` through Prisma.
+- **Strategy pattern:** `ShortCodeGenerator` abstracts URL-code generation; `Base62ShortCodeGenerator` is the cryptographically secure V1 implementation.
+- **Adapter pattern:** Prisma repositories adapt database access to module contracts, and the auth module adapts JWT/API-key verification to core’s credential-verifier port.
+- **Declarative routing / middleware pipeline:** one `route()` declaration composes validation, authentication, scopes, rate limiting, idempotency, Express registration, and OpenAPI documentation.
+- **Event-driven integration:** modules may communicate through the in-process event bus when an asynchronous domain event is appropriate; direct imports of another module’s internals are blocked by ESLint.
 
 ## Adding a new module
 

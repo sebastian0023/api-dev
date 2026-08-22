@@ -19,7 +19,8 @@ export interface RouteRequestSchemas {
 
 export interface RouteResponseSpec {
   status: number;
-  schema: ZodType;
+  /** Omit for responses with no body, such as 204 and HTTP redirects. */
+  schema?: ZodType;
   description?: string;
 }
 

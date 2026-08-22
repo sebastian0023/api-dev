@@ -52,6 +52,7 @@ services:
       REFRESH_TOKEN_TTL_DAYS: "30"
       DEFAULT_RATE_LIMIT_POINTS: "60"
       DEFAULT_RATE_LIMIT_WINDOW_SECONDS: "60"
+      URL_SHORT_CODE_LENGTH: "7"
     ports:
       - "3000:3000"
     volumes:

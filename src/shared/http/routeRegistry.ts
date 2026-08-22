@@ -21,7 +21,16 @@ export interface RouteResponseSpec {
   status: number;
   /** Omit for responses with no body, such as 204 and HTTP redirects. */
   schema?: ZodType;
+  /** Defaults to application/json; use application/pdf for binary responses. */
+  contentType?: string;
   description?: string;
+}
+
+/** Optional route-specific budget. Routes sharing a bucket share one budget. */
+export interface RouteRateLimit {
+  bucket: string;
+  points: number;
+  durationSeconds: number;
 }
 
 export interface RouteDefinition {
@@ -37,6 +46,7 @@ export interface RouteDefinition {
   auth: boolean;
   scopes?: string[];
   idempotent?: boolean;
+  rateLimit?: RouteRateLimit;
   request?: RouteRequestSchemas;
   response: RouteResponseSpec;
   /** HTTP status codes (besides the success response) documented as possible errors. */

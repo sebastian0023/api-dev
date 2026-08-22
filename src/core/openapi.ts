@@ -12,10 +12,12 @@ const STATUS_TEXT: Record<number, string> = {
   404: "Not Found",
   409: "Conflict",
   410: "Gone",
+  413: "Payload Too Large",
   422: "Unprocessable Entity",
   429: "Too Many Requests",
   500: "Internal Server Error",
   503: "Service Unavailable",
+  504: "Gateway Timeout",
 };
 
 // express-style ':id' -> OpenAPI-style '{id}'. Our routes never use
@@ -46,7 +48,9 @@ export function buildOpenApiDocument() {
     const responses: ZodOpenApiOperationObject["responses"] = {
       [statusKey(route.response.status)]: {
         description: route.response.description ?? "OK",
-        ...(route.response.schema ? { content: { "application/json": { schema: route.response.schema } } } : {}),
+        ...(route.response.schema
+          ? { content: { [route.response.contentType ?? "application/json"]: { schema: route.response.schema } } }
+          : {}),
       },
     };
     for (const code of route.errors ?? []) {

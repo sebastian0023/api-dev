@@ -3,11 +3,28 @@ import { ZodError, z } from "zod";
 import { ApiError } from "../../shared/http/errors.js";
 import { Prisma } from "../../generated/prisma/client.js";
 
+function isPayloadTooLarge(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (("status" in err && err.status === 413) || ("type" in err && err.type === "entity.too.large"))
+  );
+}
+
 // Express identifies error-handling middleware by arity (fn.length === 4),
 // so `next` must stay a declared parameter even though it's unused here —
 // this is always the terminal handler.
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction): void {
   const requestId = res.locals.requestId as string | undefined;
+
+  if (isPayloadTooLarge(err)) {
+    res.status(413).json({
+      data: null,
+      error: { code: "PAYLOAD_TOO_LARGE", message: "Request payload is too large" },
+      meta: { requestId },
+    });
+    return;
+  }
 
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({

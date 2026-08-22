@@ -28,6 +28,8 @@ export interface ModuleManifest {
   /** Other module `name`s that must finish onInit before this module's onInit runs. */
   dependencies: string[];
   onInit(ctx: ModuleContext): Promise<void>;
+  /** Optional graceful-shutdown hook, called in reverse module-init order. */
+  onDestroy?(): Promise<void>;
 }
 
 // Express Router instances (and async functions in general) are functions
@@ -53,6 +55,9 @@ export const ManifestSchema = z.object({
   onInit: z.custom<ModuleManifest["onInit"]>(isFunction, {
     message: "onInit must be an async function",
   }),
+  onDestroy: z.custom<NonNullable<ModuleManifest["onDestroy"]>>(isFunction, {
+    message: "onDestroy must be an async function",
+  }).optional(),
 }) satisfies z.ZodType<ModuleManifest>;
 
 export class ModuleLoadError extends Error {

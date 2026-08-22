@@ -35,6 +35,10 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    init: true
+    ipc: host
+    security_opt:
+      - seccomp=./deploy/playwright-seccomp.json
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +57,14 @@ services:
       DEFAULT_RATE_LIMIT_POINTS: "60"
       DEFAULT_RATE_LIMIT_WINDOW_SECONDS: "60"
       URL_SHORT_CODE_LENGTH: "7"
+      PDF_RENDER_TIMEOUT_MS: "30000"
+      PDF_MAX_CONCURRENT_RENDERS: "2"
+      PDF_MAX_QUEUED_RENDERS: "10"
+      PDF_QUEUE_TIMEOUT_MS: "5000"
+      PDF_HTML_MAX_BYTES: "1048576"
+      PDF_DEFAULT_FORMAT: A4
+      PDF_RATE_LIMIT_POINTS: "10"
+      PDF_RATE_LIMIT_WINDOW_SECONDS: "60"
     ports:
       - "3000:3000"
     volumes:

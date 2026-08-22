@@ -13,6 +13,14 @@ const EnvSchema = z.object({
   DEFAULT_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(60),
   DEFAULT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
   URL_SHORT_CODE_LENGTH: z.coerce.number().int().min(4).max(32).default(7),
+  PDF_RENDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
+  PDF_MAX_CONCURRENT_RENDERS: z.coerce.number().int().min(1).max(16).default(2),
+  PDF_MAX_QUEUED_RENDERS: z.coerce.number().int().min(0).max(100).default(10),
+  PDF_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(5_000),
+  PDF_HTML_MAX_BYTES: z.coerce.number().int().min(1_024).max(10 * 1024 * 1024).default(1_048_576),
+  PDF_DEFAULT_FORMAT: z.enum(["A4", "Letter", "Legal"]).default("A4"),
+  PDF_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(10),
+  PDF_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

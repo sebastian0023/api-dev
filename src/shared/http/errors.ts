@@ -32,3 +32,11 @@ export const tooManyRequests = (message = "Rate limit exceeded") =>
   new ApiError(429, "TOO_MANY_REQUESTS", message);
 
 export const internal = (message = "Internal server error") => new ApiError(500, "INTERNAL_ERROR", message);
+
+export const payloadTooLarge = (message = "Request payload is too large") =>
+  new ApiError(413, "PAYLOAD_TOO_LARGE", message);
+
+export const serviceUnavailable = (message = "Service unavailable") =>
+  new ApiError(503, "SERVICE_UNAVAILABLE", message);
+
+export const gatewayTimeout = (message = "Request timed out") => new ApiError(504, "GATEWAY_TIMEOUT", message);

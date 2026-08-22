@@ -1,11 +1,12 @@
 import { Router, type RequestHandler } from "express";
 import { authenticate } from "../../core/middleware/auth.js";
-import { rateLimit } from "../../core/middleware/rateLimit.js";
+import { createRateLimit } from "../../core/middleware/rateLimit.js";
 import { idempotency } from "../../core/middleware/idempotency.js";
 import { forbidden } from "./errors.js";
 import {
   registerRoute,
   type HttpMethod,
+  type RouteRateLimit,
   type RouteRequestSchemas,
   type RouteResponseSpec,
 } from "./routeRegistry.js";
@@ -34,6 +35,7 @@ export interface RouteDef {
   auth: boolean;
   scopes?: string[];
   idempotent?: boolean;
+  rateLimit?: RouteRateLimit;
   request?: RouteRequestSchemas;
   response: RouteResponseSpec;
   /** Non-2xx status codes this route can return, for the generated docs. */
@@ -65,6 +67,7 @@ export function createModuleRouter(opts: { name: string; basePath: string; tag: 
       auth: def.auth,
       scopes: def.scopes,
       idempotent: def.idempotent,
+      rateLimit: def.rateLimit,
       request: def.request,
       response: def.response,
       errors: def.errors,
@@ -87,7 +90,7 @@ export function createModuleRouter(opts: { name: string; basePath: string; tag: 
     // rate limiter always sees the resolved req.user — and therefore an API
     // key's own ApiKey.rateLimit budget — regardless of whether auth was
     // resolved by the module-level guard or by this route's own `auth: true`.
-    chain.push(rateLimit);
+    chain.push(createRateLimit(def.rateLimit));
 
     if (def.idempotent) {
       chain.push(idempotency);

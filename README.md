@@ -7,6 +7,7 @@ Current modules:
 - `auth` — JWT sessions, refresh-token rotation, and scoped API keys.
 - `qr` — QR image generation and optional tracked redirects.
 - `url` — authenticated URL management and public, counted short-link redirects.
+- `pdf` — authenticated, synchronous HTML and public-URL PDF rendering.
 
 New modules are auto-discovered, dependency-ordered, initialized, and mounted without a central registration file.
 
@@ -19,6 +20,7 @@ New modules are auto-discovered, dependency-ordered, initialized, and mounted wi
 - **Auth:** JWT access + refresh tokens (with rotation) for humans, API keys for programmatic access
 - **Docs:** Swagger UI at `/docs`, generated from the same Zod schemas that validate requests
 - **QR generation:** `qrcode`, server-side, no external service
+- **PDF generation:** Playwright Chromium, isolated per-render browser contexts
 - **Frontend:** React + Vite, with a typed client generated from the OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
 ## Getting started
@@ -63,7 +65,8 @@ Express API ── request context, auth, errors, rate limits, idempotency
         │
         ▼
 Module loader ──► auth ──► qr
-        │               └─► url
+        │               ├─► url
+        │               └─► pdf
         ▼
 PostgreSQL (Prisma) + Redis
 ```
@@ -146,6 +149,14 @@ Every response is `{ data, error, meta: { requestId } }` (`res.ok()`, attached b
 - POST endpoints that create a resource accept an optional `Idempotency-Key` header.
 - All input is validated with Zod at the controller boundary.
 - Rate limits are enforced per API key (`ApiKey.rateLimit`), falling back to a per-user or per-IP default.
+
+### PDF rendering
+
+`POST /api/v1/pdf/html` and `POST /api/v1/pdf/url` require authentication and the `pdf:generate` API-key scope. They return raw `application/pdf` bytes with an inline `document.pdf` disposition rather than the normal JSON envelope. HTML scripts are disabled; public HTTP(S) assets and URL-rendering subrequests are DNS-checked and blocked when they target local, private, link-local, metadata, or otherwise non-public addresses. Both endpoints share a stricter PDF-specific rate limit.
+
+The SSRF protection validates DNS answers before navigation and on intercepted browser requests. DNS can still change between that validation and Chromium's connection, so production deployments should additionally deny browser egress to private and metadata networks.
+
+The Docker API image includes Chromium and runs it as the non-root `node` user with Chromium sandbox support. The Playwright seccomp profile is applied by Compose; use equivalent egress and seccomp controls in other deployments.
 
 ## Verification
 

@@ -200,3 +200,18 @@ export async function loadModules(app: Express): Promise<ModuleManifest[]> {
 
   return ordered;
 }
+
+/** Runs optional module cleanup hooks without making modules depend on process globals. */
+export async function shutdownModules(modules: readonly ModuleManifest[]): Promise<void> {
+  for (const module of [...modules].reverse()) {
+    if (!module.onDestroy) continue;
+    try {
+      await module.onDestroy();
+      logger.info(`Destroyed "${module.name}"`);
+    } catch (err) {
+      logger.error(`Failed to destroy "${module.name}"`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}

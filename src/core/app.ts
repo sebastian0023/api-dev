@@ -4,7 +4,7 @@ import helmet from "helmet";
 import { config } from "./config.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { errorHandler } from "./middleware/errorHandler.js";
-import { loadModules } from "./moduleLoader.js";
+import { loadModules, shutdownModules } from "./moduleLoader.js";
 import { mountDocs } from "./openapi.js";
 import { notFound } from "../shared/http/errors.js";
 
@@ -29,7 +29,8 @@ export async function buildApp(): Promise<Express> {
 
   app.get("/health", (_req, res) => res.ok({ status: "ok" }));
 
-  await loadModules(app);
+  const modules = await loadModules(app);
+  app.locals.shutdown = () => shutdownModules(modules);
 
   mountDocs(app);
 

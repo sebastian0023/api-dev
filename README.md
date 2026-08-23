@@ -1,6 +1,6 @@
 # API Dev Platform
 
-A developer-facing API platform built as a **modular monolith**. It provides reusable developer APIs for authentication, QR generation, and URL shortening, while keeping each feature independently organized under `src/modules/`.
+A developer-facing API platform built as a **modular monolith**. It provides reusable developer APIs for authentication, QR generation, URL shortening, PDF rendering, and everyday developer utilities, while keeping each feature independently organized under `src/modules/`.
 
 Current modules:
 
@@ -8,6 +8,7 @@ Current modules:
 - `qr` — QR image generation and optional tracked redirects.
 - `url` — authenticated URL management and public, counted short-link redirects.
 - `pdf` — authenticated, synchronous HTML and public-URL PDF rendering.
+- `dev-tools` — stateless UUID, hashing, Base64, and JWT-decode utilities.
 
 New modules are auto-discovered, dependency-ordered, initialized, and mounted without a central registration file.
 
@@ -21,6 +22,7 @@ New modules are auto-discovered, dependency-ordered, initialized, and mounted wi
 - **Docs:** Swagger UI at `/docs`, generated from the same Zod schemas that validate requests
 - **QR generation:** `qrcode`, server-side, no external service
 - **PDF generation:** Playwright Chromium, isolated per-render browser contexts
+- **Developer utilities:** `uuid` plus Node's built-in `crypto`/`Buffer` — no database, no external service
 - **Frontend:** React + Vite, with a typed client generated from the OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
 ## Getting started
@@ -157,6 +159,22 @@ Every response is `{ data, error, meta: { requestId } }` (`res.ok()`, attached b
 The SSRF protection validates DNS answers before navigation and on intercepted browser requests. DNS can still change between that validation and Chromium's connection, so production deployments should additionally deny browser egress to private and metadata networks.
 
 The Docker API image includes Chromium and runs it as the non-root `node` user with Chromium sandbox support. The Playwright seccomp profile is applied by Compose; use equivalent egress and seccomp controls in other deployments.
+
+### Developer tools
+
+Five stateless utilities under `/api/v1/dev-tools`, each requiring authentication and its own API-key scope:
+
+| Endpoint | Scope | Notes |
+| --- | --- | --- |
+| `POST /uuid` | `devtools:uuid` | v4 or v7, 1–100 per call |
+| `POST /hash` | `devtools:hash` | SHA-256/384/512, hex or Base64 output |
+| `POST /base64/encode` | `devtools:encoding` | UTF-8 text in, Base64 out |
+| `POST /base64/decode` | `devtools:encoding` | Rejects non-canonical Base64 and non-UTF-8 bytes with a 400 |
+| `POST /jwt/decode` | `devtools:jwt` | Header and payload only — **no verification** |
+
+The module owns no Prisma model and holds no state; each request is pure computation. Text inputs are capped at 1 MiB and JWTs at 32 KiB, over which the endpoints return a 413 (the shared JSON body parser's own 2 MiB cap sits above both, so a tool's limit is what a caller actually hits). Each tool has its own rate-limit bucket.
+
+`POST /jwt/decode` decodes the header and payload for inspection and reports `iat`/`exp` metadata. It does **not** verify the signature, issuer, or audience, and a successful response says nothing about a token's authenticity — never use it as an authentication check.
 
 ## Verification
 

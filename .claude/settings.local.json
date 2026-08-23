@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pkill -f \"tsx watch src/server.ts\")"
+      "Bash(pkill -f \"tsx watch src/server.ts\")",
+      "Bash(node -e \"const d=require\\('./openapi.json'\\); console.log\\(Object.keys\\(d.paths\\).filter\\(p=>p.includes\\('dev-tools'\\)\\).join\\('\\\\n'\\)\\)\")"
     ]
   }
 }

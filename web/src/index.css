@@ -263,6 +263,66 @@ button[type="submit"]:disabled {
   grid-column: span 2;
 }
 
+.devtools-card {
+  grid-column: span 2;
+}
+
+.devtools-warning {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.82rem;
+}
+
+.devtools-result {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.devtools-subheading {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.devtools-output {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.devtools-list {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 .pdf-options {
   align-items: end;
 }
@@ -341,6 +401,10 @@ button[type="submit"]:disabled {
   }
 
   .pdf-card {
+    grid-column: auto;
+  }
+
+  .devtools-card {
     grid-column: auto;
   }
 }

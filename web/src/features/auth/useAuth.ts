@@ -1,16 +1,10 @@
 import { useCallback, useState } from "react";
-import { api, getAccessToken, setTokens } from "../../api/client.js";
-
-function errorMessage(err: unknown): string {
-  if (err && typeof err === "object" && "error" in err) {
-    const inner = (err as { error?: { message?: string } }).error;
-    if (inner?.message) return inner.message;
-  }
-  return "Something went wrong. Please try again.";
-}
+import { api, getAccessToken, getEmail, setSession } from "../../api/client.js";
+import { errorMessage } from "../../api/errors.js";
 
 export interface UseAuthResult {
   isAuthenticated: boolean;
+  email: string | null;
   busy: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<boolean>;
@@ -24,7 +18,9 @@ export interface UseAuthResult {
 // inferred response type to `never` — a known openapi-fetch rough edge.
 // Keeping this loose lets both call sites below share one result handler.
 interface AuthApiResponse {
-  data?: { data: { tokens: { accessToken: string; refreshToken: string; expiresIn: number } } };
+  data?: {
+    data: { user: { email: string }; tokens: { accessToken: string; refreshToken: string; expiresIn: number } };
+  };
   error?: unknown;
 }
 
@@ -33,6 +29,7 @@ interface AuthApiResponse {
 // see index.ts for the module's full exported surface.
 export function useAuth(): UseAuthResult {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getAccessToken()));
+  const [email, setEmail] = useState<string | null>(() => getEmail());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,8 +42,9 @@ export function useAuth(): UseAuthResult {
         setError(errorMessage(res.error));
         return false;
       }
-      setTokens(res.data.data.tokens);
+      setSession({ tokens: res.data.data.tokens, email: res.data.data.user.email });
       setIsAuthenticated(true);
+      setEmail(res.data.data.user.email);
       return true;
     } catch {
       setError("Could not reach the API. Is it running?");
@@ -69,9 +67,10 @@ export function useAuth(): UseAuthResult {
   );
 
   const logout = useCallback(() => {
-    setTokens(null);
+    setSession(null);
     setIsAuthenticated(false);
+    setEmail(null);
   }, []);
 
-  return { isAuthenticated, busy, error, login, register, logout };
+  return { isAuthenticated, email, busy, error, login, register, logout };
 }

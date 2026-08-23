@@ -59,6 +59,10 @@ npm run web:dev               # http://localhost:5173
 
 </details>
 
+## Web app
+
+`web/` is a sidebar-shell React app: `web/src/app/` holds the shell (`AppShell`, `Sidebar`, `Topbar`) and hash-based routing (`useNav.ts`, no router dependency — `#/qr`, `#/urls`, `#/pdf`, `#/dev-tools`, `#/webhooks`, `#/api-keys`), `web/src/app/screens.ts` is the single source of truth for what appears in the nav, `web/src/components/` holds the shared visual primitives (`Card`, `SegmentedControl`, `Callout`, `StatusPill`, `Disclosure`, `EmptyState`), and each API module gets one screen under `web/src/features/<name>/`. Styling is token-based (`web/src/styles/tokens.css` defines the palette/spacing/shadow custom properties consumed by `base.css`, `shell.css`, and `components.css`).
+
 ## Architecture
 
 ```text

@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface-page: #efefec;
+  --surface-card: #fbfbf9;
+  --surface-muted: #f1f1ee;
+  --surface-footer: #f6f6f3;
+  --surface-disabled: #f3f3f0;
+
+  /* Borders */
+  --border: #e2e2dd;
+  --border-strong: #d2d2cc;
+  --border-subtle: #eaeae6;
+  --border-disabled: #e6e6e1;
+
+  /* Text */
+  --text: #1c1c1a;
+  --text-secondary: #4a4a47;
+  --text-muted: #6c6c68;
+  --text-faint: #9b9b95;
+  --text-disabled: #adada7;
+
+  /* Accent */
+  --accent: #c81e46;
+  --accent-strong: #a5133a;
+  --accent-hover: #870d2e;
+  --accent-tint: #fdeef1;
+  --accent-tint-alt: #fdf3f5;
+  --accent-tint-border: #f6cdd6;
+
+  /* Status: success */
+  --success-text: #067647;
+  --success-bg: #ecfdf3;
+  --success-border: #abefc6;
+  --success-dot: #17b26a;
+
+  /* Status: danger */
+  --danger-text: #b42318;
+  --danger-bg: #fef3f2;
+  --danger-border: #fecdca;
+  --danger-dot: #f04438;
+
+  /* Status: warning */
+  --warning-text: #b54708;
+  --warning-bg: #fffaeb;
+  --warning-border: #fedf89;
+  --warning-dot: #f79009;
+
+  /* Callout (e.g. "shown once" secrets) */
+  --callout-text: #78350f;
+  --callout-text-soft: #92400e;
+  --callout-bg: #fffbeb;
+  --callout-border: #fde68a;
+  --callout-icon: #b45309;
+
+  /* Shape */
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-raised: 0 1px 2px rgba(16, 24, 40, 0.05);
+
+  /* Focus */
+  --focus-ring: 0 0 0 3px rgba(200, 30, 70, 0.18);
+  --focus-ring-danger: 0 0 0 3px rgba(240, 68, 56, 0.12);
+
+  /* Shell */
+  --sidebar-w: 236px;
+  --topbar-h: 56px;
+
+  /* Fonts */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

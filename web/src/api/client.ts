@@ -3,6 +3,7 @@ import type { paths } from "./schema.js";
 
 const ACCESS_TOKEN_KEY = "api-dev.accessToken";
 const REFRESH_TOKEN_KEY = "api-dev.refreshToken";
+const EMAIL_KEY = "api-dev.email";
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -10,6 +11,11 @@ export function getAccessToken(): string | null {
 
 export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+/** Email captured from the login/register response — the access token itself carries no email claim. */
+export function getEmail(): string | null {
+  return localStorage.getItem(EMAIL_KEY);
 }
 
 // NOTE: tokens live in localStorage for this demo screen, which is
@@ -25,6 +31,19 @@ export function setTokens(tokens: { accessToken: string; refreshToken: string } 
   }
   localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+}
+
+/** Full session helper for login/register: stores tokens plus the account email for the topbar chip. */
+export function setSession(
+  session: { tokens: { accessToken: string; refreshToken: string }; email: string } | null,
+): void {
+  if (!session) {
+    setTokens(null);
+    localStorage.removeItem(EMAIL_KEY);
+    return;
+  }
+  setTokens(session.tokens);
+  localStorage.setItem(EMAIL_KEY, session.email);
 }
 
 /** Authenticated fetch for binary endpoints such as PDF generation. */

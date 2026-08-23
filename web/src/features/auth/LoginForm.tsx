@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { SegmentedControl } from "../../components/SegmentedControl.js";
+import { LogoIcon } from "../../components/Icons.js";
 
 type Mode = "login" | "register";
 
@@ -24,50 +26,61 @@ export function LoginForm({ onLogin, onRegister, busy, error }: LoginFormProps) 
   }
 
   return (
-    <div className="card">
-      <div className="tabs">
-        <button
-          type="button"
-          className={mode === "login" ? "tab tab-active" : "tab"}
-          onClick={() => setMode("login")}
-        >
-          Log in
-        </button>
-        <button
-          type="button"
-          className={mode === "register" ? "tab tab-active" : "tab"}
-          onClick={() => setMode("register")}
-        >
-          Register
-        </button>
+    <div className="auth-page">
+      <div className="auth-column">
+        <div className="auth-brand">
+          <div className="auth-brand-row">
+            <div className="sidebar-brand-mark">
+              <LogoIcon />
+            </div>
+            <span className="sidebar-brand-name">API Dev Platform</span>
+          </div>
+          <p className="auth-subtitle">Sign in to your workspace</p>
+        </div>
+
+        <div className="card auth-card">
+          <SegmentedControl
+            aria-label="Sign in or register"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "login", label: "Log in" },
+              { value: "register", label: "Register" },
+            ]}
+          />
+          <form onSubmit={handleSubmit} className="form">
+            <label>
+              Email
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
+              <span className="field-hint">At least 8 characters</span>
+            </label>
+            {error && <p className="error">{error}</p>}
+            <button type="submit" disabled={busy}>
+              {busy ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
+            </button>
+          </form>
+        </div>
+        <p className="auth-footer">
+          Trouble signing in? <a href="mailto:support@example.com">Contact support</a>
+        </p>
       </div>
-      <form onSubmit={handleSubmit} className="form">
-        <label>
-          Email
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-          />
-        </label>
-        <label>
-          Password
-          <input
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
-          />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>
-          {busy ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
-        </button>
-      </form>
     </div>
   );
 }

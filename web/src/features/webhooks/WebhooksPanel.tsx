@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "../../api/client.js";
+import { errorMessage, UNREACHABLE } from "../../api/errors.js";
+import { Card } from "../../components/Card.js";
+import { Callout } from "../../components/Callout.js";
+import { Disclosure } from "../../components/Disclosure.js";
+import { StatusPill, toneForDeliveryStatus } from "../../components/StatusPill.js";
+import { CheckIcon } from "../../components/Icons.js";
 
 interface WebhookEventDefinition {
   name: string;
@@ -25,16 +31,7 @@ interface Delivery {
   createdAt: string;
 }
 
-const UNREACHABLE = "Could not reach the API. Is it running on :3000?";
 const PENDING_STATUSES: ReadonlyArray<Delivery["status"]> = ["pending", "delivering"];
-
-function errorMessage(err: unknown): string {
-  if (err && typeof err === "object" && "error" in err) {
-    const inner = (err as { error?: { message?: string } }).error;
-    if (inner?.message) return inner.message;
-  }
-  return "Something went wrong. Please try again.";
-}
 
 function formatTime(value: string): string {
   return new Date(value).toLocaleTimeString();
@@ -51,7 +48,6 @@ export function WebhooksPanel() {
   const [description, setDescription] = useState("");
   const [selectedEvents, setSelectedEvents] = useState<string[]>(["webhook.ping"]);
   const [newSecret, setNewSecret] = useState<string | null>(null);
-  const [copyLabel, setCopyLabel] = useState("Copy secret");
 
   const loadDeliveries = useCallback(async () => {
     const res = await api.GET("/api/v1/webhooks/deliveries", { params: { query: { limit: 15 } } });
@@ -108,23 +104,12 @@ export function WebhooksPanel() {
         return;
       }
       setNewSecret(res.data.data.secret);
-      setCopyLabel("Copy secret");
       setDescription("");
       await loadAll();
     } catch {
       setError(UNREACHABLE);
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function copySecret() {
-    if (!newSecret) return;
-    try {
-      await navigator.clipboard.writeText(newSecret);
-      setCopyLabel("Copied!");
-    } catch {
-      setError("Could not copy the secret. Please copy it manually.");
     }
   }
 
@@ -167,27 +152,43 @@ export function WebhooksPanel() {
     runEndpointAction(() => api.POST("/api/v1/webhooks/deliveries/{id}/replay", { params: { path: { id } } }));
 
   return (
-    <section className="card webhooks-card">
-      <div className="card-header">
-        <div>
-          <h2>Webhooks</h2>
-          <p className="card-description">
-            Subscribe to platform events. Deliveries are HMAC-signed and retried with exponential backoff.
-          </p>
-        </div>
-      </div>
-
+    <Card>
       <form onSubmit={handleCreate} className="form">
         <label>
           Endpoint URL
           <input
             type="url"
             required
+            aria-invalid={url.trim().length === 0}
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://your-service.example/hooks"
           />
         </label>
+        <fieldset className="events-fieldset">
+          <legend>Events</legend>
+          {catalog.map((event) => {
+            const checked = selectedEvents.includes(event.name);
+            return (
+              <label
+                key={event.name}
+                className={checked ? "event-checkbox event-checkbox-checked" : "event-checkbox"}
+                title={event.description}
+              >
+                <input type="checkbox" checked={checked} onChange={() => toggleEvent(event.name)} />
+                <span className="event-checkbox-box">{checked && <CheckIcon width={10} height={10} stroke="#ffffff" />}</span>
+                <code>{event.name}</code>
+              </label>
+            );
+          })}
+        </fieldset>
+        {error && <p className="error">{error}</p>}
+        <button type="submit" disabled={busy || selectedEvents.length === 0}>
+          {busy ? "Working…" : "Register endpoint"}
+        </button>
+      </form>
+
+      <Disclosure>
         <label>
           Description <span className="optional">(optional)</span>
           <input
@@ -197,50 +198,40 @@ export function WebhooksPanel() {
             placeholder="Staging receiver"
           />
         </label>
-        <fieldset className="webhooks-events">
-          <legend>Events</legend>
-          {catalog.map((event) => (
-            <label key={event.name} className="check-label" title={event.description}>
-              <input
-                type="checkbox"
-                checked={selectedEvents.includes(event.name)}
-                onChange={() => toggleEvent(event.name)}
-              />
-              <code>{event.name}</code>
-            </label>
-          ))}
-        </fieldset>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy || selectedEvents.length === 0}>
-          {busy ? "Working…" : "Register endpoint"}
-        </button>
-      </form>
+      </Disclosure>
 
       {newSecret && (
-        <div className="webhooks-secret">
-          <p>
-            <strong>Signing secret</strong> — shown once. Store it now; verify every delivery&apos;s{" "}
-            <code>X-Webhook-Signature</code> against it.
-          </p>
-          <code className="webhooks-secret-value">{newSecret}</code>
-          <button type="button" className="secondary-button" onClick={copySecret}>
-            {copyLabel}
-          </button>
-        </div>
+        <Callout
+          title="Signing secret — shown once"
+          description={
+            <>
+              Verify every delivery&apos;s <code>X-Webhook-Signature</code> header against this secret. We can&apos;t show it
+              again.
+            </>
+          }
+          value={newSecret}
+          onCopyError={setError}
+        />
       )}
 
       {endpoints.length > 0 && (
-        <div className="webhooks-section">
-          <h3 className="devtools-subheading">Endpoints</h3>
-          <ul className="webhooks-list">
+        <div className="section">
+          <h3 className="subheading">Endpoints</h3>
+          <ul className="endpoint-list">
             {endpoints.map((endpoint) => (
-              <li key={endpoint.id} className="webhooks-endpoint">
-                <div>
-                  <p className="webhooks-endpoint-url">{endpoint.url}</p>
-                  <p className="webhooks-endpoint-meta">
-                    {endpoint.events.join(", ")}
-                    {endpoint.active ? "" : " · paused"}
-                  </p>
+              <li key={endpoint.id} className="endpoint-row">
+                <div className="endpoint-main">
+                  <span className={endpoint.active ? "endpoint-status-dot" : "endpoint-status-dot endpoint-status-dot-paused"} />
+                  <div>
+                    <p className="endpoint-url">{endpoint.url}</p>
+                    <div className="endpoint-chips">
+                      {endpoint.events.map((event) => (
+                        <span key={event} className="endpoint-chip">
+                          {event}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 <div className="result-actions">
                   <button type="button" className="secondary-button" onClick={() => void sendTest(endpoint.id)} disabled={busy}>
@@ -260,9 +251,9 @@ export function WebhooksPanel() {
       )}
 
       {(endpoints.length > 0 || deliveries.length > 0) && (
-        <div className="webhooks-section">
-          <div className="webhooks-section-header">
-            <h3 className="devtools-subheading">Recent deliveries</h3>
+        <div className="section">
+          <div className="section-header">
+            <h3 className="subheading">Recent deliveries</h3>
             {/* The log auto-refreshes only while something is in flight, so
                 events triggered elsewhere (another tab, another card on this
                 page) need a nudge rather than an endless poll. */}
@@ -273,49 +264,50 @@ export function WebhooksPanel() {
           {deliveries.length === 0 ? (
             <p className="card-description">No deliveries yet — send a test event.</p>
           ) : (
-          <div className="webhooks-table-wrap">
-            <table className="webhooks-table">
-              <thead>
-                <tr>
-                  <th>Event</th>
-                  <th>Status</th>
-                  <th>Attempts</th>
-                  <th>When</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {deliveries.map((delivery) => (
-                  <tr key={delivery.id}>
-                    <td>
-                      <code>{delivery.eventType}</code>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${delivery.status}`}>{delivery.status}</span>
-                      {delivery.lastError && <span className="webhooks-error-note">{delivery.lastError}</span>}
-                    </td>
-                    <td>{delivery.attemptCount}</td>
-                    <td>{formatTime(delivery.createdAt)}</td>
-                    <td>
-                      {(delivery.status === "failed" || delivery.status === "succeeded") && (
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => void replay(delivery.id)}
-                          disabled={busy}
-                        >
-                          Replay
-                        </button>
-                      )}
-                    </td>
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Status</th>
+                    <th>Attempts</th>
+                    <th>When</th>
+                    <th style={{ textAlign: "right" }}>Replay</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {deliveries.map((delivery) => {
+                    const pending = PENDING_STATUSES.includes(delivery.status);
+                    return (
+                      <tr key={delivery.id}>
+                        <td>
+                          <code>{delivery.eventType}</code>
+                        </td>
+                        <td>
+                          <StatusPill tone={toneForDeliveryStatus(delivery.status)}>{delivery.status}</StatusPill>
+                          {delivery.lastError && <span className="error-note">{delivery.lastError}</span>}
+                        </td>
+                        <td>{delivery.attemptCount}</td>
+                        <td>{formatTime(delivery.createdAt)}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => void replay(delivery.id)}
+                            disabled={busy || pending}
+                          >
+                            Replay
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { authorizedFetch } from "../../api/client.js";
+import { Card } from "../../components/Card.js";
+import { SegmentedControl } from "../../components/SegmentedControl.js";
 
 type Source = "html" | "url";
 type PdfFormat = "A4" | "Letter" | "Legal";
@@ -77,21 +79,16 @@ export function PdfConverter() {
   }
 
   return (
-    <section className="card pdf-card">
-      <div className="card-header">
-        <div>
-          <h2>Convert to PDF</h2>
-          <p className="card-description">Render HTML or a public HTTP(S) URL.</p>
-        </div>
-      </div>
-      <div className="tabs" aria-label="PDF source type">
-        <button type="button" className={source === "html" ? "tab tab-active" : "tab"} onClick={() => setSource("html")}>
-          HTML
-        </button>
-        <button type="button" className={source === "url" ? "tab tab-active" : "tab"} onClick={() => setSource("url")}>
-          URL
-        </button>
-      </div>
+    <Card>
+      <SegmentedControl
+        aria-label="PDF source type"
+        value={source}
+        onChange={setSource}
+        options={[
+          { value: "html", label: "HTML" },
+          { value: "url", label: "URL" },
+        ]}
+      />
       <form onSubmit={handleSubmit} className="form">
         {source === "html" ? (
           <label>
@@ -141,6 +138,6 @@ export function PdfConverter() {
           <iframe className="pdf-preview" src={pdfUrl} title="Generated PDF preview" />
         </div>
       )}
-    </section>
+    </Card>
   );
 }

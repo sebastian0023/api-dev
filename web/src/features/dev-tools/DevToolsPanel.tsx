@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../../api/client.js";
+import { errorMessage, UNREACHABLE } from "../../api/errors.js";
+import { Card } from "../../components/Card.js";
+import { SegmentedControl } from "../../components/SegmentedControl.js";
 
 type Tool = "uuid" | "hash" | "base64" | "jwt";
 type UuidVersion = "v4" | "v7";
@@ -19,22 +22,12 @@ interface DecodedJwt {
   metadata: { issuedAt: string | null; expiresAt: string | null; expired: boolean | null };
 }
 
-const TOOLS: Array<{ id: Tool; label: string }> = [
-  { id: "uuid", label: "UUID" },
-  { id: "hash", label: "Hash" },
-  { id: "base64", label: "Base64" },
-  { id: "jwt", label: "JWT" },
+const TOOLS: Array<{ value: Tool; label: string }> = [
+  { value: "uuid", label: "UUID" },
+  { value: "hash", label: "Hash" },
+  { value: "base64", label: "Base64" },
+  { value: "jwt", label: "JWT" },
 ];
-
-const UNREACHABLE = "Could not reach the API. Is it running on :3000?";
-
-function errorMessage(err: unknown): string {
-  if (err && typeof err === "object" && "error" in err) {
-    const inner = (err as { error?: { message?: string } }).error;
-    if (inner?.message) return inner.message;
-  }
-  return "Something went wrong. Please try again.";
-}
 
 function formatTimestamp(value: string | null): string {
   return value ? new Date(value).toLocaleString() : "—";
@@ -159,26 +152,8 @@ export function DevToolsPanel() {
   }
 
   return (
-    <section className="card devtools-card">
-      <div className="card-header">
-        <div>
-          <h2>Developer tools</h2>
-          <p className="card-description">Stateless UUID, hashing, Base64, and JWT utilities.</p>
-        </div>
-      </div>
-
-      <div className="tabs" aria-label="Developer tool">
-        {TOOLS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className={tool === entry.id ? "tab tab-active" : "tab"}
-            onClick={() => selectTool(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
+    <Card>
+      <SegmentedControl aria-label="Developer tool" value={tool} onChange={selectTool} options={TOOLS} />
 
       {tool === "uuid" && (
         <>
@@ -217,7 +192,7 @@ export function DevToolsPanel() {
                 ))}
               </ul>
               <div className="result-actions">
-                <button type="button" className="secondary-button" onClick={copyUuids}>
+                <button type="button" className="secondary-button" onClick={() => void copyUuids()}>
                   {copyLabel}
                 </button>
               </div>
@@ -349,9 +324,9 @@ export function DevToolsPanel() {
 
           {jwt && (
             <div className="devtools-result">
-              <h3 className="devtools-subheading">Header</h3>
+              <h3 className="subheading">Header</h3>
               <pre className="devtools-output">{JSON.stringify(jwt.header, null, 2)}</pre>
-              <h3 className="devtools-subheading">Payload</h3>
+              <h3 className="subheading">Payload</h3>
               <pre className="devtools-output">{JSON.stringify(jwt.payload, null, 2)}</pre>
               <dl className="meta">
                 <dt>Issued at</dt>
@@ -365,6 +340,6 @@ export function DevToolsPanel() {
           )}
         </>
       )}
-    </section>
+    </Card>
   );
 }

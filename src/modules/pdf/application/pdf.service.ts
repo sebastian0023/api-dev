@@ -9,7 +9,7 @@ import {
   PdfRenderError,
   PdfTooLargeError,
 } from "../../pdf/domain/pdf.errors.js";
-import { DestinationPolicy } from "../../pdf/infrastructure/destinationPolicy.js";
+import { DestinationPolicy } from "../../../shared/net/destinationPolicy.js";
 
 export interface PdfOptionsInput {
   format?: PdfFormat;

@@ -96,3 +96,66 @@ model UrlShortUrl {
   @@index([userId])
   @@index([expiresAt])
 }
+
+// ── webhooks module ─────────────────────────────────────────────────────
+
+model WebhookEndpoint {
+  id          String   @id @default(uuid())
+  userId      String
+  url         String
+  description String?
+  // Unlike ApiKey.keyHash, this is stored in plaintext: the server needs
+  // the secret itself to compute each delivery's HMAC, so a one-way hash
+  // could never sign anything. Production deployments should encrypt this
+  // column at rest with a managed key — see the README.
+  secret      String
+  events      String[]
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id            String    @id @default(uuid())
+  endpointId    String
+  userId        String
+  eventType     String
+  payload       Json
+  // pending | delivering | succeeded | failed
+  status        String    @default("pending")
+  attemptCount  Int       @default(0)
+  nextAttemptAt DateTime?
+  // Set while a dispatcher holds this row, so two instances polling the
+  // same table can never send the same delivery twice.
+  claimId       String?
+  lastError     String?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  endpoint WebhookEndpoint          @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  attempts WebhookDeliveryAttempt[]
+
+  @@index([userId])
+  @@index([endpointId])
+  @@index([status, nextAttemptAt])
+}
+
+model WebhookDeliveryAttempt {
+  id           String   @id @default(uuid())
+  deliveryId   String
+  attempt      Int
+  statusCode   Int?
+  responseBody String?
+  errorMessage String?
+  durationMs   Int
+  createdAt    DateTime @default(now())
+
+  delivery WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+}

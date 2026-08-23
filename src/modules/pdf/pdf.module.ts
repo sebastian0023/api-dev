@@ -6,7 +6,8 @@ import { createPdfController } from "./pdf.controller.js";
 import { createPdfRoutes } from "./pdf.routes.js";
 import { BrowserManager } from "./infrastructure/browserManager.js";
 import { ChromiumPdfRenderer } from "./infrastructure/chromiumPdfRenderer.js";
-import { DestinationPolicy } from "./infrastructure/destinationPolicy.js";
+import { DestinationPolicy, systemDnsResolver } from "../../shared/net/destinationPolicy.js";
+import { pdfDestinationErrors } from "./infrastructure/pdfDestinationErrors.js";
 
 const routerHandle = Router();
 let browserManager: BrowserManager | undefined;
@@ -25,7 +26,7 @@ const manifest: ModuleManifest = {
       queueTimeoutMs: config.PDF_QUEUE_TIMEOUT_MS,
       renderTimeoutMs: config.PDF_RENDER_TIMEOUT_MS,
     });
-    const destinationPolicy = new DestinationPolicy();
+    const destinationPolicy = new DestinationPolicy(systemDnsResolver, { errors: pdfDestinationErrors });
     const renderer = new ChromiumPdfRenderer(browserManager, destinationPolicy, ctx.logger, config.PDF_RENDER_TIMEOUT_MS);
     const service = createPdfService({ renderer, destinationPolicy, logger: ctx.logger });
     routerHandle.use(createPdfRoutes(createPdfController(service)));

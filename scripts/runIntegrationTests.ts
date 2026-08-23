@@ -31,6 +31,19 @@ if (!databaseUrl || !redisUrl) {
   throw new Error("DATABASE_URL and REDIS_URL are required to run integration tests");
 }
 
-const testEnv = { ...process.env, DATABASE_URL: databaseUrl, REDIS_URL: redisUrl };
+// core/config.ts parses process.env at import time, so anything a test
+// needs configured has to be set here, before the child process starts.
+// The webhook suites deliver to a throwaway 127.0.0.1 receiver and poll
+// hard so a delivery settles within the test rather than seconds later.
+const testEnv = {
+  ...process.env,
+  DATABASE_URL: databaseUrl,
+  REDIS_URL: redisUrl,
+  WEBHOOKS_ALLOW_PRIVATE_DESTINATIONS: "true",
+  WEBHOOKS_POLL_INTERVAL_MS: "100",
+  WEBHOOKS_BACKOFF_BASE_SECONDS: "1",
+  WEBHOOKS_MAX_ATTEMPTS: "3",
+  WEBHOOKS_TIMEOUT_MS: "2000",
+};
 await run("npx", ["prisma", "migrate", "deploy"], testEnv);
 await run("npx", ["tsx", "--test", "--test-concurrency=1", "tests/integration/**/*.test.ts", "tests/api/**/*.test.ts"], testEnv);

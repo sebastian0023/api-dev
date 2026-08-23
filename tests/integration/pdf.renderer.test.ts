@@ -4,7 +4,7 @@ import { createServer, type Server } from "node:http";
 import test from "node:test";
 import { BrowserManager } from "../../src/modules/pdf/infrastructure/browserManager.js";
 import { ChromiumPdfRenderer } from "../../src/modules/pdf/infrastructure/chromiumPdfRenderer.js";
-import { DestinationPolicy } from "../../src/modules/pdf/infrastructure/destinationPolicy.js";
+import { DestinationPolicy } from "../../src/shared/net/destinationPolicy.js";
 
 const logger = { info() {}, warn() {}, error() {} };
 const options = {

@@ -1,6 +1,6 @@
 # API Dev Platform
 
-A developer-facing API platform built as a **modular monolith**. It provides reusable developer APIs for authentication, QR generation, URL shortening, PDF rendering, and everyday developer utilities, while keeping each feature independently organized under `src/modules/`.
+A developer-facing API platform built as a **modular monolith**. It provides reusable developer APIs for authentication, QR generation, URL shortening, PDF rendering, everyday developer utilities, and outbound webhooks, while keeping each feature independently organized under `src/modules/`.
 
 Current modules:
 
@@ -9,6 +9,7 @@ Current modules:
 - `url` — authenticated URL management and public, counted short-link redirects.
 - `pdf` — authenticated, synchronous HTML and public-URL PDF rendering.
 - `dev-tools` — stateless UUID, hashing, Base64, and JWT-decode utilities.
+- `webhooks` — subscriber endpoints, HMAC-signed outbound delivery, retries, and a replayable delivery log.
 
 New modules are auto-discovered, dependency-ordered, initialized, and mounted without a central registration file.
 
@@ -23,6 +24,7 @@ New modules are auto-discovered, dependency-ordered, initialized, and mounted wi
 - **QR generation:** `qrcode`, server-side, no external service
 - **PDF generation:** Playwright Chromium, isolated per-render browser contexts
 - **Developer utilities:** `uuid` plus Node's built-in `crypto`/`Buffer` — no database, no external service
+- **Webhook delivery:** in-process dispatcher polling Postgres, HMAC-SHA256 signing, exponential backoff
 - **Frontend:** React + Vite, with a typed client generated from the OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
 ## Getting started
@@ -175,6 +177,43 @@ Five stateless utilities under `/api/v1/dev-tools`, each requiring authenticatio
 The module owns no Prisma model and holds no state; each request is pure computation. Text inputs are capped at 1 MiB and JWTs at 32 KiB, over which the endpoints return a 413 (the shared JSON body parser's own 2 MiB cap sits above both, so a tool's limit is what a caller actually hits). Each tool has its own rate-limit bucket.
 
 `POST /jwt/decode` decodes the header and payload for inspection and reports `iat`/`exp` metadata. It does **not** verify the signature, issuer, or audience, and a successful response says nothing about a token's authenticity — never use it as an authentication check.
+
+### Webhooks
+
+Register an endpoint, subscribe it to platform events, and the API delivers each one as a signed POST. `GET /api/v1/webhooks/events` lists what can be subscribed to — currently `webhook.ping` (test-fires only), `auth.user.registered`, `auth.apikey.created`, `auth.apikey.revoked`, and `qr.code.created`. Reads need the `webhooks:read` scope, writes `webhooks:write`.
+
+This module is the event bus's first consumer: it subscribes to topics other modules already emit and imports nothing from them, so a module can start emitting a new event without either side knowing about the other. `POST /endpoints/:id/test` fires a synthetic `webhook.ping` so you can watch the whole signing/delivery/retry loop without waiting for real activity.
+
+**Verifying a delivery.** Each request carries `X-Webhook-Id`, `-Event`, `-Attempt`, `-Timestamp`, and:
+
+```
+X-Webhook-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256>
+```
+
+The signature covers `<timestamp>.<raw body>` — not the body alone — so a captured payload can be rejected once its timestamp is old. Compare digests in constant time:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(header, rawBody, secret) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=").map((s) => s.trim())));
+  const expected = createHmac("sha256", secret).update(`${parts.t}.${rawBody}`, "utf8").digest("hex");
+  const a = Buffer.from(parts.v1 ?? "", "utf8");
+  const b = Buffer.from(expected, "utf8");
+  // Reject anything older than five minutes to blunt replay of a captured body.
+  const fresh = Math.abs(Date.now() / 1000 - Number(parts.t)) < 300;
+  return fresh && a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+Verify against the **raw** body bytes, before any JSON parse-and-reencode.
+
+**Retries.** A non-2xx response, a timeout, or a connection failure schedules another attempt at `WEBHOOKS_BACKOFF_BASE_SECONDS * 2^(n-1)` (capped, jittered) until `WEBHOOKS_MAX_ATTEMPTS` is spent — 10s, 20s, 40s, 80s by default, then the delivery is marked `failed`. A malformed or blocked destination fails immediately, since retrying cannot help. Every attempt is recorded with its status code, truncated response body, and duration, readable at `GET /deliveries/:id`. `POST /deliveries/:id/replay` requeues a settled delivery with a fresh budget while preserving the earlier attempt history. Retry state lives in Postgres, so a restart mid-backoff resumes rather than dropping the delivery, and a claim column keeps two instances from sending the same one twice.
+
+**Two things to know before running this anywhere real:**
+
+- The signing secret is stored in plaintext. Unlike an API key, which is only ever compared, the server must have the secret itself to compute each HMAC — a one-way hash could not sign anything. Encrypt the `WebhookEndpoint.secret` column at rest with a managed key in production.
+- `WEBHOOKS_ALLOW_PRIVATE_DESTINATIONS` is **dev-only**. It is `true` in `docker-compose.yml` and `.env.example` so you can deliver to a receiver on your own machine; it disables this module's SSRF address checks, so leave it `false` anywhere users other than you can register an endpoint. With it off, endpoint URLs are DNS-validated against the same shared policy the PDF module uses (`src/shared/net/destinationPolicy.ts`) on registration *and* before every attempt, and redirects are never followed. As with PDF rendering, DNS can still change between validation and connection, so deployments should also deny egress to private and metadata networks.
 
 ## Verification
 

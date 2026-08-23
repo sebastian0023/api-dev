@@ -4,7 +4,7 @@ import type { PdfRenderer } from "../../pdf/domain/pdfRenderer.js";
 import type { PdfOptions, RenderHtmlPdfInput, RenderUrlPdfInput } from "../../pdf/domain/pdf.types.js";
 import { PdfBlockedDestinationError, PdfNavigationTimeoutError, PdfRenderError } from "../../pdf/domain/pdf.errors.js";
 import { BrowserManager } from "./browserManager.js";
-import { DestinationPolicy } from "./destinationPolicy.js";
+import { DestinationPolicy } from "../../../shared/net/destinationPolicy.js";
 
 function toBrowserOptions(options: PdfOptions) {
   return {

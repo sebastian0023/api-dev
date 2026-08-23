@@ -21,6 +21,21 @@ const EnvSchema = z.object({
   PDF_DEFAULT_FORMAT: z.enum(["A4", "Letter", "Legal"]).default("A4"),
   PDF_RATE_LIMIT_POINTS: z.coerce.number().int().positive().default(10),
   PDF_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+  WEBHOOKS_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  WEBHOOKS_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(5_000),
+  WEBHOOKS_BACKOFF_BASE_SECONDS: z.coerce.number().int().min(1).max(3_600).default(10),
+  WEBHOOKS_BACKOFF_MAX_SECONDS: z.coerce.number().int().min(1).max(86_400).default(3_600),
+  WEBHOOKS_POLL_INTERVAL_MS: z.coerce.number().int().min(50).max(60_000).default(1_000),
+  WEBHOOKS_MAX_CONCURRENT_DELIVERIES: z.coerce.number().int().min(1).max(64).default(5),
+  WEBHOOKS_MAX_RESPONSE_BYTES: z.coerce.number().int().min(0).max(65_536).default(2_048),
+  // Development escape hatch: lets webhook deliveries reach 127.0.0.1 and
+  // other private addresses so the loop can be exercised without a tunnel.
+  // Must stay false anywhere untrusted users can register endpoints — it
+  // disables the SSRF address checks for this module.
+  WEBHOOKS_ALLOW_PRIVATE_DESTINATIONS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

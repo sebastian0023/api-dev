@@ -5,10 +5,13 @@ import { config } from "../../src/core/config.js";
 import { createPdfService, normalizePdfOptions } from "../../src/modules/pdf/application/pdf.service.js";
 import { PdfBlockedDestinationError, PdfRenderError, PdfTooLargeError } from "../../src/modules/pdf/domain/pdf.errors.js";
 import type { PdfRenderer } from "../../src/modules/pdf/domain/pdfRenderer.js";
-import { DestinationPolicy } from "../../src/modules/pdf/infrastructure/destinationPolicy.js";
+import { DestinationPolicy } from "../../src/shared/net/destinationPolicy.js";
+import { pdfDestinationErrors } from "../../src/modules/pdf/infrastructure/pdfDestinationErrors.js";
 
 const logger = { info() {}, warn() {}, error() {} };
-const publicPolicy = new DestinationPolicy(async () => [{ address: "8.8.8.8", family: 4 }]);
+const publicPolicy = new DestinationPolicy(async () => [{ address: "8.8.8.8", family: 4 }], {
+  errors: pdfDestinationErrors,
+});
 
 function service(renderer: PdfRenderer) {
   return createPdfService({ renderer, destinationPolicy: publicPolicy, logger });
@@ -63,7 +66,9 @@ test("rejects oversized HTML, blocked URLs, and unexpected renderer failures", a
 
   const blocked = createPdfService({
     renderer,
-    destinationPolicy: new DestinationPolicy(async () => [{ address: "127.0.0.1", family: 4 }]),
+    destinationPolicy: new DestinationPolicy(async () => [{ address: "127.0.0.1", family: 4 }], {
+      errors: pdfDestinationErrors,
+    }),
     logger,
   });
   await assert.rejects(() => blocked.renderUrl({ url: "https://public-name.test" }), PdfBlockedDestinationError);
